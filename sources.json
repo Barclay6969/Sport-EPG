@@ -1,0 +1,82 @@
+[
+  {
+    "name": "rytecTNT_Basic.xz",
+    "url": "http://www.xmltvepg.nl/rytecTNT_Basic.xz"
+  },
+  {
+    "name": "rytecBE_FR_Common.xz",
+    "url": "http://www.xmltvepg.nl/rytecBE_FR_Common.xz"
+  },
+  {
+    "name": "rytecFR_Mixte.xz",
+    "url": "http://www.xmltvepg.nl/rytecFR_Mixte.xz"
+  },
+  {
+    "name": "rytecFR_SportMovies.xz",
+    "url": "http://www.xmltvepg.nl/rytecFR_SportMovies.xz"
+  },
+  {
+    "name": "rytecIT_Basic.xz",
+    "url": "http://www.xmltvepg.nl/rytecIT_Basic.xz"
+  },
+  {
+    "name": "rytecIT_Sky.xz",
+    "url": "http://www.xmltvepg.nl/rytecIT_Sky.xz"
+  },
+  {
+    "name": "rytecIT_SportMovies.xz",
+    "url": "http://www.xmltvepg.nl/rytecIT_SportMovies.xz"
+  },
+  {
+    "name": "rytecNL_Basic.xz",
+    "url": "http://www.xmltvepg.nl/rytecNL_Basic.xz"
+  },
+  {
+    "name": "rytecBE_NL_Common.xz",
+    "url": "http://www.xmltvepg.nl/rytecBE_NL_Common.xz"
+  },
+  {
+    "name": "rytecNL_Extra.xz",
+    "url": "http://www.xmltvepg.nl/rytecNL_Extra.xz"
+  },
+  {
+    "name": "spain1.xml",
+    "url": "https://raw.githubusercontent.com/globetvapp/epg/main/Spain/spain1.xml"
+  },
+  {
+    "name": "spain2.xml",
+    "url": "https://raw.githubusercontent.com/globetvapp/epg/main/Spain/spain2.xml"
+  },
+  {
+    "name": "spain3.xml",
+    "url": "https://raw.githubusercontent.com/globetvapp/epg/main/Spain/spain3.xml"
+  },
+  {
+    "name": "spain4.xml",
+    "url": "https://raw.githubusercontent.com/globetvapp/epg/main/Spain/spain4.xml"
+  },
+  {
+    "name": "spain5.xml",
+    "url": "https://raw.githubusercontent.com/globetvapp/epg/main/Spain/spain5.xml"
+  },
+  {
+    "name": "rytecDE_SportMovies.xz",
+    "url": "http://www.xmltvepg.nl/rytecDE_SportMovies.xz"
+  },
+  {
+    "name": "rytecDE_Common.xz",
+    "url": "http://www.xmltvepg.nl/rytecDE_Common.xz"
+  },
+  {
+    "name": "rytecCH_Basic.xz",
+    "url": "http://www.xmltvepg.nl/rytecCH_Basic.xz"
+  },
+  {
+    "name": "rytecAT_Basic.xz",
+    "url": "http://www.xmltvepg.nl/rytecAT_Basic.xz"
+  },
+  {
+    "name": "rytecDE_Basic.xz",
+    "url": "http://www.xmltvepg.nl/rytecDE_Basic.xz"
+  }
+]

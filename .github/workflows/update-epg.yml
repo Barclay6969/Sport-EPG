@@ -1,0 +1,44 @@
+name: EPG aktualisieren
+on:
+  schedule:
+    - cron: '0 6 * * 1,5'
+      timezone: Europe/Zurich
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - merge_epg.py
+      - sources.json
+      - tests/**
+      - .github/workflows/update-epg.yml
+permissions:
+  contents: write
+concurrency:
+  group: sport-epg-publication
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Tests
+        run: python -m unittest discover -s tests -v
+      - name: Quellen laden und XMLTV pruefen
+        run: python merge_epg.py
+      - name: Gepruefte Ausgabe veroeffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view epg-latest >/dev/null 2>&1; then
+            gh release create epg-latest --title 'Aktuelles Sport-EPG' --notes 'Automatisch aktualisiert am Montag und Freitag um 06:00 Uhr Europe/Zurich.'
+          fi
+          gh release upload epg-latest dist/Sport.xml dist/Sport.xml.gz dist/status.json --clobber
+          echo 'EPG erfolgreich aktualisiert.' >> "$GITHUB_STEP_SUMMARY"
+          cat dist/status.json >> "$GITHUB_STEP_SUMMARY"
