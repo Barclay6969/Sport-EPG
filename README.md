@@ -1,6 +1,8 @@
 # Sport-EPG
 
-Aktualisiert die 20 oeffentlichen Rytec-/Spanien-Quellen automatisch jeden Montag und Freitag um 06:00 Uhr Schweizer Zeit. Der GitHub-Zeitplan beruecksichtigt Sommer- und Winterzeit; die Ausfuehrung kann sich bei GitHub-Auslastung verzoegern.
+Aktualisiert die 20 oeffentlichen Rytec-/Spanien-Quellen automatisch alle zwei Tage um 06:00 Uhr Schweizer Zeit, beginnend am 30. Oktober 2026. Der GitHub-Zeitplan beruecksichtigt Sommer- und Winterzeit; die Ausfuehrung kann sich bei GitHub-Auslastung verzoegern.
+
+Der Zeitplan wird taeglich geprueft; Download und Veroeffentlichung erfolgen nur an jedem zweiten Kalendertag. Dadurch bleibt der Rhythmus auch ueber Monats- und Jahreswechsel erhalten. Manuelle Starts und Codeaenderungen koennen zusaetzliche Aktualisierungen ausloesen.
 
 Feste EPG-Adressen nach Einrichtung unter Barclay6969/Sport-EPG:
 
