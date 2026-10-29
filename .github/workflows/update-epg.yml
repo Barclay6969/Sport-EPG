@@ -1,7 +1,7 @@
 name: EPG aktualisieren
 on:
   schedule:
-    - cron: '0 6 * * 1,5'
+    - cron: '0 6 * * *'
       timezone: Europe/Zurich
   workflow_dispatch:
   push:
@@ -21,15 +21,36 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Zwei-Tage-Rhythmus pruefen
+        id: cadence
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          python3 - <<'PY'
+          import datetime as dt
+          import os
+          from zoneinfo import ZoneInfo
+          today = dt.datetime.now(ZoneInfo("Europe/Zurich")).date()
+          anchor = dt.date(2026, 10, 30)
+          due = os.environ["EVENT_NAME"] != "schedule" or (today - anchor).days % 2 == 0
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"run={str(due).lower()}\n")
+          print(f"{today}: {'EPG aktualisieren' if due else 'Pausentag'}")
+          PY
       - uses: actions/checkout@v4
+        if: steps.cadence.outputs.run == 'true'
       - uses: actions/setup-python@v5
+        if: steps.cadence.outputs.run == 'true'
         with:
           python-version: '3.12'
       - name: Tests
+        if: steps.cadence.outputs.run == 'true'
         run: python -m unittest discover -s tests -v
       - name: Quellen laden und XMLTV pruefen
+        if: steps.cadence.outputs.run == 'true'
         run: python merge_epg.py
       - name: Gepruefte Ausgabe veroeffentlichen
+        if: steps.cadence.outputs.run == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -37,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           if ! gh release view epg-latest >/dev/null 2>&1; then
-            gh release create epg-latest --title 'Aktuelles Sport-EPG' --notes 'Automatisch aktualisiert am Montag und Freitag um 06:00 Uhr Europe/Zurich.'
+            gh release create epg-latest --title 'Aktuelles Sport-EPG' --notes 'Automatisch aktualisiert alle zwei Tage um 06:00 Uhr Europe/Zurich (ab 30.10.2026).'
           fi
           gh release upload epg-latest dist/Sport.xml dist/Sport.xml.gz dist/status.json --clobber
           echo 'EPG erfolgreich aktualisiert.' >> "$GITHUB_STEP_SUMMARY"
