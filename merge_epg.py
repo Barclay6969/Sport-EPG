@@ -169,6 +169,7 @@ def merge(sources, directory, output, now, cache=None):
             while chunk := src.read(1024 * 1024):
                 gz.write(chunk)
     report['xml_sha256'] = hashlib.sha256(pending.read_bytes()).hexdigest()
+    report['gz_sha256'] = hashlib.sha256(compressed.read_bytes()).hexdigest()
     os.replace(pending, output / 'Sport.xml')
     os.replace(compressed, output / 'Sport.xml.gz')
     (output / 'status.json').write_text(json.dumps(report, indent=2) + '\n')
@@ -188,3 +189,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

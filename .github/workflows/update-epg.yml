@@ -1,13 +1,19 @@
 name: EPG aktualisieren
 on:
   schedule:
-    - cron: '0 6 * * *'
+    - cron: '17 6,8,10,14,18,22 * * *'
       timezone: Europe/Zurich
   workflow_dispatch:
+    inputs:
+      force:
+        description: Auch eine bereits aktuelle Ausgabe neu erstellen
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
       - merge_epg.py
+      - automation.py
       - sources.json
       - tests/**
       - .github/workflows/update-epg.yml
@@ -21,45 +27,47 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Zwei-Tage-Rhythmus pruefen
-        id: cadence
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          python3 - <<'PY'
-          import datetime as dt
-          import os
-          from zoneinfo import ZoneInfo
-          today = dt.datetime.now(ZoneInfo("Europe/Zurich")).date()
-          anchor = dt.date(2026, 10, 30)
-          due = os.environ["EVENT_NAME"] != "schedule" or (today - anchor).days % 2 == 0
-          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
-              output.write(f"run={str(due).lower()}\n")
-          print(f"{today}: {'EPG aktualisieren' if due else 'Pausentag'}")
-          PY
       - uses: actions/checkout@v4
-        if: steps.cadence.outputs.run == 'true'
       - uses: actions/setup-python@v5
-        if: steps.cadence.outputs.run == 'true'
         with:
           python-version: '3.12'
       - name: Tests
-        if: steps.cadence.outputs.run == 'true'
         run: python -m unittest discover -s tests -v
-      - name: Quellen laden und XMLTV pruefen
-        if: steps.cadence.outputs.run == 'true'
-        run: python merge_epg.py
-      - name: Gepruefte Ausgabe veroeffentlichen
-        if: steps.cadence.outputs.run == 'true'
+      - name: Faelligkeit und letzte vollstaendige Veroeffentlichung pruefen
+        id: cadence
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+          FORCE_UPDATE: ${{ inputs.force || false }}
         shell: bash
         run: |
           set -euo pipefail
-          if ! gh release view epg-latest >/dev/null 2>&1; then
-            gh release create epg-latest --title 'Aktuelles Sport-EPG' --notes 'Automatisch aktualisiert alle zwei Tage um 06:00 Uhr Europe/Zurich (ab 30.10.2026).'
+          if [[ "$FORCE_UPDATE" == "true" ]]; then
+            python automation.py check --force
+          else
+            python automation.py check
           fi
-          gh release upload epg-latest dist/Sport.xml dist/Sport.xml.gz dist/status.json --clobber
-          echo 'EPG erfolgreich aktualisiert.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Quellen laden und XMLTV pruefen
+        if: steps.cadence.outputs.run == 'true'
+        run: python merge_epg.py
+      - name: Veroeffentlichen, pruefen und bei Uploadfehlern wiederherstellen
+        if: steps.cadence.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python automation.py publish
+      - name: Erfolgreiche Ausgabe protokollieren
+        if: steps.cadence.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          cp dist/status.json last-success.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add last-success.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'EPG erfolgreich aktualisiert [skip ci]'
+            git push origin HEAD:main
+          fi
+          echo 'EPG erfolgreich veroeffentlicht und per Pruefsumme kontrolliert.' >> "$GITHUB_STEP_SUMMARY"
           cat dist/status.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Bereits aktuell
+        if: steps.cadence.outputs.run != 'true'
+        run: echo 'Kein neuer Download erforderlich; letzte faellige Ausgabe ist vollstaendig vorhanden.' >> "$GITHUB_STEP_SUMMARY"
