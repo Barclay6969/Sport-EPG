@@ -11,6 +11,7 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import time
+import unicodedata
 import urllib.request
 import xml.etree.ElementTree as ET
 
@@ -51,16 +52,34 @@ def download(source, directory, cache=None):
     path.write_bytes(raw)
     return source, path, hashlib.sha256(data).hexdigest()
 
-def channel_ids(value, source_name):
+def spanish_key(value):
+    value = unicodedata.normalize('NFKD', value.replace('&', 'and')).casefold()
+    return ''.join(c for c in value if c.isalnum() or c == '+')
+
+def legacy_spanish_ids(path):
+    aliases = {}
+    opener = gzip.open if str(path).endswith('.gz') else open
+    with opener(path, 'rb') as stream:
+        for _, element in ET.iterparse(stream):
+            cid = element.get('id', '')
+            if element.tag == 'channel' and cid.lower().endswith('.es'):
+                aliases.setdefault(spanish_key(cid), set()).add(cid)
+            element.clear()
+    return aliases
+
+def channel_ids(value, source_name, aliases=None):
     # Keep original IDs. Legacy Sport.xml used dotted Spanish IDs as well.
     values = [value]
     if source_name.startswith('spain'):
         alias = '.'.join(value.split())
         if alias not in values:
             values.append(alias)
+        for alias in sorted((aliases or {}).get(spanish_key(value), ())):
+            if alias not in values:
+                values.append(alias)
     return values
 
-def merge(sources, directory, output, now, cache=None):
+def merge(sources, directory, output, now, cache=None, aliases=None):
     database = sqlite3.connect(directory / 'epg.sqlite')
     database.execute('CREATE TABLE channels (id TEXT PRIMARY KEY, xml BLOB)')
     database.execute('CREATE TABLE programmes (channel TEXT, start TEXT, stop TEXT, xml BLOB, PRIMARY KEY(channel,start))')
@@ -102,7 +121,7 @@ def merge(sources, directory, output, now, cache=None):
                         raise ValueError('Missing channel id')
                     declared.add(original)
                     stats['channels'] += 1
-                    for cid in channel_ids(original, source['name']):
+                    for cid in channel_ids(original, source['name'], aliases):
                         element.set('id', cid)
                         if not element.findall('display-name'):
                             ET.SubElement(element, 'display-name').text = original
@@ -122,7 +141,7 @@ def merge(sources, directory, output, now, cache=None):
                     referenced.add(original)
                     stats['programmes'] += 1
                     stats['future_programmes'] += int(stop > now)
-                    for cid in channel_ids(original, source['name']):
+                    for cid in channel_ids(original, source['name'], aliases):
                         element.set('channel', cid)
                         element.set('start', start.strftime('%Y%m%d%H%M%S +0000'))
                         element.set('stop', stop.strftime('%Y%m%d%H%M%S +0000'))
@@ -138,7 +157,7 @@ def merge(sources, directory, output, now, cache=None):
                 raise ValueError(f"{source['name']}: empty or outdated feed; publication aborted")
             # Some feeds omit channel declarations. Supply explicit matching IDs.
             for missing in referenced - declared:
-                for cid in channel_ids(missing, source['name']):
+                for cid in channel_ids(missing, source['name'], aliases):
                     element = ET.Element('channel', id=cid)
                     ET.SubElement(element, 'display-name').text = missing
                     database.execute('INSERT OR IGNORE INTO channels VALUES (?,?)', (cid, ET.tostring(element, encoding='utf-8')))
@@ -180,11 +199,13 @@ def main():
     parser.add_argument('--sources', type=Path, default=Path('sources.json'))
     parser.add_argument('--output', type=Path, default=Path('dist'))
     parser.add_argument('--cache', type=Path)
+    parser.add_argument('--previous', type=Path, help='Preserve matching legacy Spanish IDs from the previous XMLTV output')
     parser.add_argument('--now', help='ISO timestamp; for reproducible local verification')
     args = parser.parse_args()
     now = dt.datetime.fromisoformat(args.now) if args.now else dt.datetime.now(UTC)
     with tempfile.TemporaryDirectory() as work:
-        report = merge(json.loads(args.sources.read_text()), Path(work), args.output, now, args.cache)
+        aliases = legacy_spanish_ids(args.previous) if args.previous else None
+        report = merge(json.loads(args.sources.read_text()), Path(work), args.output, now, args.cache, aliases)
     print(json.dumps({k: v for k, v in report.items() if k != 'sources'}, indent=2))
 
 if __name__ == '__main__':

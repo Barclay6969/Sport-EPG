@@ -48,7 +48,11 @@ jobs:
           fi
       - name: Quellen laden und XMLTV pruefen
         if: steps.cadence.outputs.run == 'true'
-        run: python merge_epg.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -c "from automation import gh, retry; from pathlib import Path; Path('previous').mkdir(exist_ok=True); retry(lambda: gh('release', 'download', 'epg-latest', '-R', 'Barclay6969/Sport-EPG', '--pattern', 'Sport.xml.gz', '--dir', 'previous', '--clobber'))"
+          python merge_epg.py --previous previous/Sport.xml.gz
       - name: Spanische Sender-IDs mit letzter Ausgabe vergleichen
         if: steps.cadence.outputs.run == 'true'
         env:
@@ -66,9 +70,7 @@ jobs:
                       if el.tag=='channel' and el.get('id','').lower().endswith('.es'): found.add(el.get('id'))
                       el.clear()
               return found
-          with tempfile.TemporaryDirectory() as tmp:
-              retry(lambda: gh('release','download','epg-latest','-R','Barclay6969/Sport-EPG','--pattern','Sport.xml.gz','--dir',tmp,'--clobber'))
-              old=ids(Path(tmp)/'Sport.xml.gz', True)
+          old=ids('previous/Sport.xml.gz', True)
           new=ids('dist/Sport.xml')
           missing=old-new
           print(f'Spanische IDs: vorher {len(old)}, jetzt {len(new)}, erhalten {len(old & new)}')

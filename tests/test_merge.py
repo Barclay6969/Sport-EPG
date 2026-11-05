@@ -5,9 +5,19 @@ from pathlib import Path
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
-from merge_epg import merge, timestamp, UTC
+from merge_epg import merge, timestamp, UTC, legacy_spanish_ids, channel_ids
 
 class MergeTests(unittest.TestCase):
+    def test_legacy_spanish_aliases_preserve_accents_and_punctuation(self):
+        with tempfile.TemporaryDirectory() as d:
+            previous = Path(d)/'previous.xml.gz'
+            previous.write_bytes(gzip.compress(b'<tv><channel id="Crimen.and.Historia.es"/><channel id="Crimen and Historia.es"/><channel id="NOW.70s.es"/><channel id="La1.de"/></tv>'))
+            aliases = legacy_spanish_ids(previous)
+            self.assertTrue({'Crimen.and.Historia.es', 'Crimen and Historia.es'} <= set(channel_ids('Crimen & Historia.es', 'spain5.xml', aliases)))
+            self.assertIn('NOW.70s.es', channel_ids("NOW 70\'s.es", 'spain5.xml', aliases))
+            self.assertEqual(channel_ids('Crimen & Historia.es', 'rytecDE_Basic.xz', aliases), ['Crimen & Historia.es'])
+            self.assertNotIn('La1.de', {v for values in aliases.values() for v in values})
+
     def test_timezone(self):
         self.assertEqual(timestamp('20261027120000 +0100'), timestamp('20261027110000 +0000'))
 
@@ -42,4 +52,5 @@ class MergeTests(unittest.TestCase):
             self.assertFalse((root/'out/Sport.xml').exists())
 
 if __name__=='__main__':unittest.main()
+
 
