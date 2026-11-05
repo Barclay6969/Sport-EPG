@@ -31,6 +31,24 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Diagnose Spanien-Ersatzquellen
+        run: |
+          python -u - <<'PY'
+          import urllib.request, gzip, xml.etree.ElementTree as E
+          import concurrent.futures
+          def probe(url):
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as r: data=r.read()
+                  if data.startswith(b'\x1f\x8b'): data=gzip.decompress(data)
+                  root=E.fromstring(data)
+                  ids=[c.get('id') for c in root.findall('channel')]
+                  ends=[p.get('stop','') for p in root.findall('programme')]
+                  print(url, 'channels',len(ids),'latest',max(ends,default=''), 'ids',repr(ids[:25]), flush=True)
+              except Exception as e: print(url,str(e),flush=True)
+          urls=['https://www.open-epg.com/files/spain'+str(i)+'.xml' for i in range(1,6)]
+          urls+=['https://epgshare01.online/epgshare01/epg_ripper_ES1.xml.gz','https://github.com/Barclay6969/Sport-EPG/releases/download/epg-latest/Sport.xml.gz']
+          with concurrent.futures.ThreadPoolExecutor(max_workers=7) as pool: list(pool.map(probe,urls))
+          PY
       - name: Tests
         run: python -m unittest discover -s tests -v
       - name: Faelligkeit und letzte vollstaendige Veroeffentlichung pruefen
