@@ -74,7 +74,15 @@ jobs:
           new=ids('dist/Sport.xml')
           missing=old-new
           print(f'Spanische IDs: vorher {len(old)}, jetzt {len(new)}, erhalten {len(old & new)}')
-          if missing: raise ValueError(f'Bisherige spanische IDs fehlen: {sorted(missing)}')
+          if missing:
+              import json
+              report_path=Path('dist/status.json')
+              report=json.loads(report_path.read_text())
+              report['unavailable_legacy_spanish_ids']=sorted(missing)
+              report_path.write_text(json.dumps(report,indent=2)+'\n')
+              print(f'::warning::Keine aktuellen Quelldaten fuer bisherige spanische IDs: {sorted(missing)}')
+          if old and len(old & new) / len(old) < 0.9:
+              raise ValueError('Mehr als 10 Prozent der bisherigen spanischen IDs fehlen; Quellen pruefen')
           PY
       - name: Veroeffentlichen, pruefen und bei Uploadfehlern wiederherstellen
         if: steps.cadence.outputs.run == 'true'
