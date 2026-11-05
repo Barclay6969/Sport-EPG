@@ -42,9 +42,9 @@ def download(source, directory, cache=None):
                 with urllib.request.urlopen(request, timeout=90) as response:
                     data = response.read()
                 break
-            except Exception:
+            except Exception as exc:
                 if attempt == 2:
-                    raise
+                    raise RuntimeError(f"{name}: download failed from {source['url']}: {exc}") from exc
                 time.sleep(2 ** attempt)
     raw = unpack(data, name)
     path = directory / (name + '.xml')
